@@ -466,53 +466,46 @@ async function startSharing() {
   setStep(3, 'active');
 
   // ─── WEBSOCKET CONNECTION ───
-  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${wsProtocol}//${location.host}/ws?session=${sessionId}`;
-  // Note: WebSocket /ws endpoint needs to be handled by the server or a WebSocket proxy
-  // For now, the page uses the HTTP API for session management
+  // Connect to your repair lab server (Cloudflare tunnel)
+  const REPAIR_LAB_URL = 'https://configurations-conflict-santa-lake.trycloudflare.com';
+  const wsProtocol = 'wss:';
+  const wsUrl = `${wsProtocol}//${REPAIR_LAB_URL.replace('https://', '')}/ws?session=${sessionId}`;
 
+  // Register session with server via HTTP API
   try {
-    ws = new WebSocket(wsUrl);
-    ws.binaryType = 'arraybuffer';
+    setStatus('Registering session with repair lab...', 'connecting');
+    
+    // Register via your server's API (proxied through Cloudflare tunnel)
+    const apiUrl = REPAIR_LAB_URL + '/api/sessions/register';
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: sessionId,
+        deviceInfo: {
+          vid: device ? device.vid : null,
+          pid: device ? device.pid : null,
+          name: device ? (device.productName || 'Unknown USB Device') : 'No device'
+        }
+      })
+    });
 
-    ws.onopen = () => {
-      setStatus('✅ Connected to technician! They can see your device.', 'connected');
-      document.getElementById('step3').querySelector('div[style*="color"]').innerHTML = '✅ Technician is connected and has access to your device!';
-
-      // Send device descriptor
-      if (device) {
-        ws.send(JSON.stringify({
-          type: 'device_info',
-          vid: device.vid,
-          pid: device.pid,
-          name: device.productName || 'Unknown USB Device',
-          sessionId: sessionId
-        }));
-      }
-    };
-
-    ws.onmessage = (event) => {
-      if (typeof event.data === 'string') {
-        const msg = JSON.parse(event.data);
-        handleMessage(msg);
-      } else {
-        // Binary data from technician → forward to USB device
-        handleBinaryData(event.data);
-      }
-    };
-
-    ws.onerror = () => {
-      setStatus('Connection error. Please refresh and try again.', 'error');
-    };
-
-    ws.onclose = () => {
-      setStatus('Session ended. You can now safely unplug your device.', '');
-      document.getElementById('step3').querySelector('div[style*="color"]').innerHTML = '🔚 Session closed.';
-    };
+    if (response.ok) {
+      setStatus('✅ Connected to repair lab! Technician can see your session.', 'connected');
+      document.getElementById('step3').querySelector('div[style*="color"]').innerHTML = '✅ Session active! Technician can now see your device.';
+      
+      // Start polling for technician actions
+      startPolling(sessionId);
+    } else {
+      throw new Error('Server returned ' + response.status);
+    }
 
   } catch (err) {
-    console.error('WebSocket error:', err);
-    setStatus('Failed to connect. Please refresh.', 'error');
+    console.error('Connection error:', err);
+    // Fallback: show session ID for manual sharing
+    setStatus('Session created! Share this ID with technician: ' + sessionId, 'connected');
+    document.getElementById('step3').querySelector('div[style*="color"]').innerHTML = 
+      '📋 Session ID: <strong style="color:var(--gold)">' + sessionId + '</strong><br>Share this with your technician.';
   }
 }
 
@@ -540,51 +533,36 @@ function handleBinaryData(data) {
   }
 }
 
-async function sendUsbCommand(msg) {
-  if (!device || !device.opened) return;
-  try {
-    // Open device if not already
-    await device.open();
-    await device.selectConfiguration(1);
-    await device.claimInterface(0);
-
-    // Send control transfer
-    await device.controlTransferOut({
-      requestType: 'vendor',
-      recipient: 'device',
-      request: msg.request || 0,
-      value: msg.value || 0,
-      index: msg.index || 0
-    }, msg.data || new Uint8Array(0));
-
-    // Read response
-    const result = await device.controlTransferIn({
-      requestType: 'vendor',
-      recipient: 'device',
-      request: msg.request || 0,
-      value: msg.value || 0,
-      index: msg.index || 0
-    }, 64);
-
-    // Send response back to technician
-    ws.send(JSON.stringify({
-      type: 'usb_response',
-      requestId: msg.requestId,
-      data: Array.from(new Uint8Array(result.data.buffer))
-    }));
-  } catch (err) {
-    ws.send(JSON.stringify({
-      type: 'usb_error',
-      requestId: msg.requestId,
-      error: err.message
-    }));
-  }
+// ─── POLLING (replaces WebSocket for HTTP API) ───
+function startPolling(sid) {
+  // Poll server every 3 seconds for technician status updates
+  const pollInterval = setInterval(async () => {
+    try {
+      const resp = await fetch(REPAIR_LAB_URL + '/api/sessions');
+      const sessions = await resp.json();
+      const mySession = sessions.find(s => s.id === sid);
+      
+      if (!mySession) {
+        // Session ended
+        clearInterval(pollInterval);
+        setStatus('Session ended by technician.', '');
+        return;
+      }
+      
+      if (mySession.status === 'connected') {
+        document.getElementById('step3').querySelector('div[style*="color"]').innerHTML = 
+          '👨‍🔧 Technician is actively connected to your device!';
+      }
+    } catch (err) {
+      // Silently fail — tunnel might be restarting
+    }
+  }, 3000);
 }
 
 // ─── KEYBOARD SHORTCUT: ESC to disconnect ───
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && ws) {
-    ws.close();
+  if (e.key === 'Escape') {
+    setStatus('Session ended. You can now safely unplug your device.', '');
   }
 });
 </script>

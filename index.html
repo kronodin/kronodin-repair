@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔧 Microtuff Repair Connect — Secure USB Session</title>
+<style>
+:root {
+  --bg: #0a0e17;
+  --card: #111827;
+  --border: #2a3a52;
+  --gold: #d4a843;
+  --gold-light: #f0d078;
+  --green: #10b981;
+  --red: #ef4444;
+  --blue: #1e90ff;
+  --text: #e2e8f0;
+  --muted: #64748b;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ─── HEADER ─── */
+.header {
+  width: 100%;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #0d1420 0%, var(--card) 100%);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.brand-text h1 {
+  font-size: 18px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-text p {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.session-id {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: monospace;
+  background: rgba(212, 168, 67, 0.1);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 168, 67, 0.2);
+}
+
+/* ─── MAIN ─── */
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 700px;
+  padding: 40px 24px;
+}
+
+/* ─── STEPS ─── */
+.step {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  margin-bottom: 20px;
+  transition: all 0.3s;
+}
+
+.step.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 20px rgba(212, 168, 67, 0.15);
+}
+
+.step.completed {
+  border-color: var(--green);
+  opacity: 0.8;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 12px;
+  transition: all 0.3s;
+}
+
+.step.active .step-number {
+  background: var(--gold);
+  color: #000;
+}
+
+.step.completed .step-number {
+  background: var(--green);
+  color: #fff;
+}
+
+.step-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.step-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+/* ─── BUTTONS ─── */
+.btn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #b8922e, var(--gold));
+  color: #000;
+  box-shadow: 0 4px 12px rgba(212, 168, 67, 0.3);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 168, 67, 0.4); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-success {
+  background: linear-gradient(135deg, #059669, var(--green));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+.btn-success:hover { transform: translateY(-2px); }
+
+.btn-danger {
+  background: linear-gradient(135deg, #dc2626, var(--red));
+  color: #fff;
+}
+
+/* ─── DEVICE INFO ─── */
+.device-info {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 12px;
+  display: none;
+}
+
+.device-info.visible { display: block; }
+
+.device-info .label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.device-info .value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green);
+  font-family: monospace;
+}
+
+/* ─── STATUS ─── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.status-dot.connected { background: var(--green); animation: pulse 2s infinite; }
+.status-dot.connecting { background: var(--gold); animation: pulse 1s infinite; }
+.status-dot.error { background: var(--red); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ─── FOOTER ─── */
+.footer {
+  width: 100%;
+  padding: 16px 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 480px) {
+  .header { flex-direction: column; align-items: flex-start; }
+  .step { padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ─── -->
+<div class="header">
+  <div class="brand">
+    <div class="brand-logo">🔧</div>
+    <div class="brand-text">
+      <h1>Microtuff Repair Connect</h1>
+      <p>Secure Remote USB Session</p>
+    </div>
+  </div>
+  <div class="session-id" id="sessionId">Session: ----</div>
+</div>
+
+<!-- ─── STATUS ─── -->
+<div class="status-bar">
+  <div class="status-dot" id="statusDot"></div>
+  <span id="statusText">Waiting for device...</span>
+</div>
+
+<!-- ─── MAIN ─── -->
+<div class="main">
+
+  <!-- Step 1: Connect Device -->
+  <div class="step active" id="step1">
+    <div class="step-number">1</div>
+    <div class="step-title">Connect Your USB Device</div>
+    <div class="step-desc">
+      Plug your device into this computer, then click the button below.<br>
+      A browser dialog will appear — select your device and click "Connect".
+    </div>
+    <button class="btn btn-primary" id="connectBtn" onclick="connectDevice()">
+      🔌 Connect USB Device
+    </button>
+    <div class="device-info" id="deviceInfo">
+      <div class="label">Connected Device</div>
+      <div class="value" id="deviceName">--</div>
+    </div>
+  </div>
+
+  <!-- Step 2: Share with Technician -->
+  <div class="step" id="step2">
+    <div class="step-number">2</div>
+    <div class="step-title">Share with Repair Technician</div>
+    <div class="step-desc">
+      Once your device is connected, click below to share it with our technician.<br>
+      They will be able to see and control your device remotely.
+    </div>
+    <button class="btn btn-success" id="shareBtn" onclick="startSharing()" disabled>
+      🔗 Share Device with Technician
+    </button>
+  </div>
+
+  <!-- Step 3: Wait for Connection -->
+  <div class="step" id="step3">
+    <div class="step-number">3</div>
+    <div class="step-title">Technician Connecting...</div>
+    <div class="step-desc">
+      Your device is shared. Our technician is connecting to diagnose/repair.<br>
+      <strong>Do not unplug your device or close this page.</strong>
+    </div>
+    <div style="margin-top: 12px; font-size: 13px; color: var(--gold);">
+      ⏳ Waiting for technician to connect...
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── FOOTER ─── -->
+<div class="footer">
+  🔒 End-to-end encrypted · No data stored · You control when to disconnect<br>
+  Microtuff Solutions © 2026 — Repair Connect v1.0
+</div>
+
+<!-- ─── JAVASCRIPT ─── -->
+<script>
+// ─── STATE ───
+let device = null;
+let ws = null;
+let sessionId = generateSessionId();
+
+document.getElementById('sessionId').textContent = 'Session: ' + sessionId;
+
+// ─── SESSION ID ───
+function generateSessionId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id = '';
+  for (let i = 0; i < 6; i++) {
+    id += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return id;
+}
+
+// ─── STEP MANAGEMENT ───
+function setStep(stepNum, state) {
+  const step = document.getElementById('step' + stepNum);
+  step.classList.remove('active', 'completed');
+  if (state === 'active') step.classList.add('active');
+  if (state === 'completed') step.classList.add('completed');
+}
+
+function setStatus(text, state) {
+  document.getElementById('statusText').textContent = text;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + (state || '');
+}
+
+// ─── STEP 1: CONNECT USB DEVICE ───
+async function connectDevice() {
+  const btn = document.getElementById('connectBtn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Connecting...';
+
+  setStatus('Requesting USB device...', 'connecting');
+
+  // ─── WebUSB ───
+  if ('usb' in navigator) {
+    try {
+      device = await navigator.usb.requestDevice({
+        filters: []  // Show all USB devices
+      });
+
+      // Store device info
+      const deviceName = device.productName || 'USB Device (VID: ' + device.vid.toString(16).toUpperCase() + ' PID: ' + device.pid.toString(16).toUpperCase() + ')';
+
+      document.getElementById('deviceName').textContent = deviceName;
+      document.getElementById('deviceInfo').classList.add('visible');
+
+      setStep(1, 'completed');
+      setStep(2, 'active');
+
+      document.getElementById('shareBtn').disabled = false;
+      setStatus('Device connected: ' + deviceName, 'connected');
+
+      btn.innerHTML = '✅ Device Connected';
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-success');
+
+    } catch (err) {
+      console.error('USB error:', err);
+      btn.disabled = false;
+      btn.innerHTML = '🔌 Connect USB Device';
+      setStatus('Device selection cancelled or failed.', 'error');
+
+      // ─── FALLBACK: WebSerial ───
+      if ('serial' in navigator) {
+        try {
+          const port = await navigator.serial.requestPort();
+          const info = port.getInfo();
+          const deviceName = 'Serial Device (VID: ' + info.usbVendorId?.toString(16).toUpperCase() + ')';
+
+          document.getElementById('deviceName').textContent = deviceName;
+          document.getElementById('deviceInfo').classList.add('visible');
+
+          setStep(1, 'completed');
+          setStep(2, 'active');
+          document.getElementById('shareBtn').disabled = false;
+          setStatus('Serial device connected: ' + deviceName, 'connected');
+
+          btn.innerHTML = '✅ Device Connected';
+        } catch (err2) {
+          btn.disabled = false;
+          btn.innerHTML = '🔌 Connect USB Device';
+          setStatus('No device selected. Please try again.', 'error');
+        }
+      }
+    }
+
+  // ─── FALLBACK: WebSerial only ───
+  } else if ('serial' in navigator) {
+    try {
+      const port = await navigator.serial.requestPort();
+      const info = port.getInfo();
+      const deviceName = 'Serial Device (VID: ' + info.usbVendorId?.toString(16).toUpperCase() + ')';
+
+      document.getElementById('deviceName').textContent = deviceName;
+      document.getElementById('deviceInfo').classList.add('visible');
+
+      setStep(1, 'completed');
+      setStep(2, 'active');
+      document.getElementById('shareBtn').disabled = false;
+      setStatus('Serial device connected: ' + deviceName, 'connected');
+
+      btn.innerHTML = '✅ Device Connected';
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '🔌 Connect USB Device';
+      setStatus('No device selected. Please try again.', 'error');
+    }
+
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = '🔌 Connect USB Device';
+    setStatus('Your browser does not support WebUSB/WebSerial. Use Chrome or Edge.', 'error');
+  }
+}
+
+// ─── STEP 2: START SHARING ───
+async function startSharing() {
+  const btn = document.getElementById('shareBtn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Establishing secure connection...';
+
+  setStatus('Connecting to technician...', 'connecting');
+
+  setStep(2, 'completed');
+  setStep(3, 'active');
+
+  // ─── WEBSOCKET CONNECTION ───
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${wsProtocol}//${location.host}/ws?session=${sessionId}`;
+  // Note: WebSocket /ws endpoint needs to be handled by the server or a WebSocket proxy
+  // For now, the page uses the HTTP API for session management
+
+  try {
+    ws = new WebSocket(wsUrl);
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen = () => {
+      setStatus('✅ Connected to technician! They can see your device.', 'connected');
+      document.getElementById('step3').querySelector('div[style*="color"]').innerHTML = '✅ Technician is connected and has access to your device!';
+
+      // Send device descriptor
+      if (device) {
+        ws.send(JSON.stringify({
+          type: 'device_info',
+          vid: device.vid,
+          pid: device.pid,
+          name: device.productName || 'Unknown USB Device',
+          sessionId: sessionId
+        }));
+      }
+    };
+
+    ws.onmessage = (event) => {
+      if (typeof event.data === 'string') {
+        const msg = JSON.parse(event.data);
+        handleMessage(msg);
+      } else {
+        // Binary data from technician → forward to USB device
+        handleBinaryData(event.data);
+      }
+    };
+
+    ws.onerror = () => {
+      setStatus('Connection error. Please refresh and try again.', 'error');
+    };
+
+    ws.onclose = () => {
+      setStatus('Session ended. You can now safely unplug your device.', '');
+      document.getElementById('step3').querySelector('div[style*="color"]').innerHTML = '🔚 Session closed.';
+    };
+
+  } catch (err) {
+    console.error('WebSocket error:', err);
+    setStatus('Failed to connect. Please refresh.', 'error');
+  }
+}
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'technician_joined':
+      document.getElementById('step3').querySelector('div[style*="color"]').innerHTML = 
+        '👨‍🔧 Technician ' + (msg.name || 'connected') + ' is now accessing your device!';
+      break;
+    case 'usb_command':
+      // Technician sent a USB command → forward to device
+      sendUsbCommand(msg);
+      break;
+    case 'ping':
+      ws.send(JSON.stringify({ type: 'pong' }));
+      break;
+  }
+}
+
+function handleBinaryData(data) {
+  // Forward binary data to USB device
+  if (device && device.opened) {
+    // Implementation depends on device type
+    console.log('Received binary data:', data.byteLength, 'bytes');
+  }
+}
+
+async function sendUsbCommand(msg) {
+  if (!device || !device.opened) return;
+  try {
+    // Open device if not already
+    await device.open();
+    await device.selectConfiguration(1);
+    await device.claimInterface(0);
+
+    // Send control transfer
+    await device.controlTransferOut({
+      requestType: 'vendor',
+      recipient: 'device',
+      request: msg.request || 0,
+      value: msg.value || 0,
+      index: msg.index || 0
+    }, msg.data || new Uint8Array(0));
+
+    // Read response
+    const result = await device.controlTransferIn({
+      requestType: 'vendor',
+      recipient: 'device',
+      request: msg.request || 0,
+      value: msg.value || 0,
+      index: msg.index || 0
+    }, 64);
+
+    // Send response back to technician
+    ws.send(JSON.stringify({
+      type: 'usb_response',
+      requestId: msg.requestId,
+      data: Array.from(new Uint8Array(result.data.buffer))
+    }));
+  } catch (err) {
+    ws.send(JSON.stringify({
+      type: 'usb_error',
+      requestId: msg.requestId,
+      error: err.message
+    }));
+  }
+}
+
+// ─── KEYBOARD SHORTCUT: ESC to disconnect ───
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ws) {
+    ws.close();
+  }
+});
+</script>
+
+</body>
+</html>

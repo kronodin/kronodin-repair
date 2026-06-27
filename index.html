@@ -567,5 +567,77 @@ document.addEventListener('keydown', (e) => {
 });
 </script>
 
+
+    <!-- DEVICE DASHBOARD -->
+    <style>
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .dcard{background:rgba(255,255,255,.03);border:1px solid rgba(212,168,67,.2);border-radius:14px;padding:1.5rem;margin-bottom:1rem;transition:all .3s;animation:fadeInUp .5s ease}
+    .dcard:hover{border-color:#d4a843;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+    .d-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:.6rem}
+    .d-on{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.6);animation:pulse 2s infinite}
+    .d-off{background:#ef4444}
+    .d-btn{padding:.5rem 1rem;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:.82rem;transition:all .2s;margin-left:.4rem}
+    .d-btn:hover{transform:scale(1.05)}
+    .btn-cn{background:rgba(34,197,94,.2);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+    .btn-dc{background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+    .btn-rs{background:rgba(212,168,67,.2);color:#d4a843;border:1px solid rgba(212,168,67,.3)}
+    #d-search{width:100%;padding:.9rem 1rem 1.1rem 2.8rem;background:rgba(0,0,0,.3);border:1px solid rgba(212,168,67,.3);border-radius:10px;color:#e0e0e0;font-size:.95rem;outline:none;transition:all .3s;margin-bottom:1.5rem;box-sizing:border-box}
+    #d-search:focus{border-color:#d4a843;box-shadow:0 0 20px rgba(212,168,67,.15)}
+    .d-search-wrap{position:relative;margin-bottom:1.5rem}
+    .d-search-wrap::before{content:"🔍";position:absolute;left:1rem;top:50%;transform:translateY(-50%);font-size:1rem;z-index:1}
+    .d-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
+    .stat-c{background:rgba(255,255,255,.03);border:1px solid rgba(212,168,67,.15);border-radius:14px;padding:1.3rem;text-align:center}
+    .stat-v{font-size:1.8rem;font-weight:700;color:#d4a843}
+    .stat-l{font-size:.72rem;color:#8899aa;margin-top:.3rem}
+    .d-empty{text-align:center;padding:3rem;color:#555}
+    </style>
+    <section id="dev-dash" style="max-width:1200px;margin:0 auto;padding:2rem">
+      <div class="d-header">
+        <div>
+          <h1 style="font-size:2rem;color:#d4a843;margin:0;font-weight:700">�️ Connected Devices</h1>
+          <p style="color:#8899aa;margin:.3rem 0 0;font-size:.9rem">Manage remote USB devices and clients</p>
+        </div>
+        <button onclick="refreshDev()" class="d-btn btn-rs" style="font-size:.9rem;padding:.7rem 1.4rem">🔄 Refresh</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-c"><div class="stat-v" id="st-total">0</div><div class="stat-l">Total Devices</div></div>
+        <div class="stat-c"><div class="stat-v" id="st-on" style="color:#22c55e">0</div><div class="stat-l">Connected</div></div>
+        <div class="stat-c"><div class="stat-v" id="st-off" style="color:#ef4444">0</div><div class="stat-l">Disconnected</div></div>
+        <div class="stat-c"><div class="stat-v" id="st-sess" style="color:#d4a843">0</div><div class="stat-l">Active Sessions</div></div>
+      </div>
+      <div class="d-search-wrap">
+        <input type="text" id="d-search" placeholder="Search by name, IP, status..." oninput="filterDev()">
+      </div>
+      <div id="d-list"><div class="d-empty"><p style="font-size:2.5rem;margin-bottom:1rem">🔌</p><p>No devices connected</p><p style="font-size:.-top:.5rem">Clients can connect via Repair Connect — share this page</p></div></div>
+    </section>
+    <script>
+    var D=[
+      {id:'DEV-001',name:'Diamond Richards - Laptop',ip:'192.168.1.45',status:'connected',last:'Just now',type:'USB Hub',os:'Win 11'},
+      {id:'DEV-002',name:'iPhone 15 Pro',ip:'10.0.0.88',status:'connected',last:'Just now',type:'Mobile',os:'iOS 18'},
+      {id:'DEV-003',name:'Samsung S24',ip:'10.0.0.92',status:'disconnected',last:'5 min ago',type:'Mobile',os:'Android 14'},
+      {id:'DEV-004',name:'iPad Pro',ip:'192.168.1.102',status:'connected',last:'Just now',type:'Tablet',os:'iPadOS 18'}
+    ];
+    function renderDev(f){
+      f=(f||'').toLowerCase();
+      var flt=D.filter(function(d){return(d.name+''+d.ip+''+d.status+''+d.id).toLowerCase().includes(f)});
+      document.getElementById('st-total').textContent=D.length;
+      document.getElementById('st-on').textContent=D.filter(function(d){return d.status==='connected'}).length;
+      document.getElementById('st-off').textContent=D.filter(function(d){return d.status==='disconnected'}).length;
+      document.getElementById('st-sess').textContent=D.filter(function(d){return d.status==='connected'}).length;
+      var l=document.getElementById('d-list');
+      if(!flt.length){l.innerHTML='<div class="d-empty"><p>🔍 No devices match your search</p></div>';return}
+      l.innerHTML=flt.map(function(d){return'<div class="dcard"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem"><div style="display:flex;align-items:center;gap:.8rem;flex:1;min-width:200px"><span class="d-dot '+((d.status==='connected')?'d-on':'d-off')+'"></span><div><div style="color:#e0e0e0;font-weight:600;font-size:1rem">'+d.name+'</div><div style="color:#8899aa;font-size:.8rem;display:flex;;margin-top:.2rem;flex-wrap:wrap"><span>� '+d.type+'</span><span>� '+d.os+\</span><span>🌐 '+d.ip+'</span><span style="color:'+(d.status==='connected'?'#22c55e':'#666')+'">● '+d.status+'</span></div></div></div><div style="display:flex;gap:.4rem;align-items:center"><span style="color:#555;font-size:.72rem;margin-right:.5rem">'+d.last+'</span>'+(d.status==='connected'?'<button onclick="devDc(this,\''+d.id+'\')" class="d-btn btn-dc">Disconnect</button><button onclick="devRs(this,\''+d.id+'\')" class="d-btn btn-rs">Restart</button>':'<button onclick="devCn(this,\''+d.id+'\')" class="d-btn btn-cn">Connect</button>')+'</div></div></div>'}).join('')
+    }
+    function devCn(b,id){b.disabled=true,b.textContent='Connecting...';var d=D.find(function(x){return x.id===id});if(d){d.status='connected',d.last='Just now'}renderDev();setTimeout(function(){b.disabled=false},1500)}
+    function devDc(b,id){b.disabled=true;b.textContent='Disconnecting...';var d=D.find(function(x){return x.id===id});if(d){d.status='disconnected',d.last='Just now'}renderDev();setTimeout(function(){b.disabled=false},1000)}
+    function devRs(b,id){b.textContent='Restarting...';var d=D.find(function(x){return x.id===id});if(d){d.status='disconnected'}renderDev();setTimeout(function(){d.status='connected',d.last='Just now';renderDev();b.textContent='Restart'},2500)}
+    function filterDev(){renderDev(document.getElementById('d-search').value)}
+    function refreshDev(){document.getElementById('d-search').value='';renderDev()}
+    setInterval(refreshDev,30000);
+    renderDev();
+    </script>
+
 </body>
 </html>
